@@ -10,6 +10,32 @@ logger = logging.getLogger(__name__)
 
 
 def load_mac_file(oui_file):
+    def parse_group(line_no, group_no, group_items):
+        items = group_items[0].split('\t')
+        mac_hex = items[0].split(' ')[0]
+        company = items[-1].strip()
+        items = group_items[1].split('\t')
+        mac_base16 = items[0].split(' ')[0]
+        company2 = items[-1].strip()
+        assert company == company2
+        if len(group_items) > 2:
+            address = group_items[2].strip()
+            address2 = group_items[3].strip()
+            country = group_items[4].strip()
+        else:
+            address = None
+            address2 = None
+            country = None
+        return {
+            'hex': mac_hex,
+            'base16': mac_base16,
+            'company': company,
+            # 'company2': company2,
+            'address': address,
+            'address2': address2,
+            'country': country,
+        }
+
     mac_orgs = []
     with open(oui_file) as f:
         line_no = 1
@@ -22,35 +48,17 @@ def load_mac_file(oui_file):
                     # header
                     pass
                 else:
-                    items = group_items[0].split('\t')
-                    mac_hex = items[0].split(' ')[0]
-                    company = items[-1].strip()
-                    items = group_items[1].split('\t')
-                    mac_base16 = items[0].split(' ')[0]
-                    company2 = items[-1].strip()
-                    assert company == company2
-                    if len(group_items) > 2:
-                        address = group_items[2].strip()
-                        address2 = group_items[3].strip()
-                        country = group_items[4].strip()
-                    else:
-                        address = None
-                        address2 = None
-                        country = None
-                    mac_orgs.append({
-                        'hex': mac_hex,
-                        'base16': mac_base16,
-                        'company': company,
-                        # 'company2': company2,
-                        'address': address,
-                        'address2': address2,
-                        'country': country,
-                    })
-                    print(f'{group_no:03d} {line_no:03d} {mac_hex} {company}')
+                    group = parse_group(line_no, group_no, group_items)
+                    mac_orgs.append(group)
+                    print(f'{group_no:03d} {line_no:03d} {group["hex"]} {group["company"]}')
                 group_no += 1
                 group_items = []
             else:
                 group_items.append(line)
+        if group_items:
+            group = parse_group(line_no, group_no, group_items)
+            mac_orgs.append(group)
+            print(f'{group_no:03d} {line_no:03d} {group["hex"]} {group["company"]}')
 
     return mac_orgs
 
